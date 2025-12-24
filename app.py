@@ -798,8 +798,8 @@ def render_stage_2_upload(navigator: StageNavigator, config: Dict):
 
                 with col_tb_2:
                     # Add Button - This uses JS to trigger the hidden uploader
-                    components.html("""
-                    <div id="btn-add-files-toolbar" style="
+                    slot_html = """
+                    <div id="add_slot" style="
                         display:flex; align-items:center; gap:6px;
                         padding:6px 12px; background:#fff; border:1px solid #e4e9f2;
                         border-radius:8px; color:#475569; font-size:14px; font-family:sans-serif;
@@ -807,22 +807,86 @@ def render_stage_2_upload(navigator: StageNavigator, config: Dict):
                     ">
                         ＋ Add <span style="font-size:10px">▼</span>
                     </div>
+                    
+                    """
+                    st.markdown(slot_html, unsafe_allow_html=True)
+
+                    bind = '''
                     <script>
-                        const tryBindToolbar = () => {
-                            const btn = document.getElementById('btn-add-files-toolbar');
-                            const input = window.parent.document.querySelector('input[type="file"]');
-                            if (btn && input) {
-                                btn.onclick = (e) => {
-                                    e.preventDefault();
-                                    input.click();
-                                };
-                            } else {
-                                setTimeout(tryBindToolbar, 250);
+                    (function(){
+                        try {
+                            const attach = () => {
+                                try {
+                                    const slot = window.parent.document.getElementById('add_slot');
+                                    if (!slot) return false;
+                                    slot.style.cursor = 'pointer';
+
+                                    const isVisible = (el) => {
+                                        try {
+                                            const s = window.parent.getComputedStyle(el);
+                                            if (!s) return false;
+                                            if (s.display === 'none' || s.visibility === 'hidden') return false;
+                                            return true;
+                                        } catch(e) { return false; }
+                                    };
+
+                                    const findVisibleFileInput = () => {
+                                        const inputs = Array.from(window.parent.document.querySelectorAll('input[type=file]'));
+                                        for (let inp of inputs.reverse()) {
+                                            try { if (isVisible(inp)) return inp; } catch(e) {}
+                                        }
+                                        return null;
+                                    };
+
+                                    const findAddButton = () => {
+                                        const buttons = Array.from(window.parent.document.querySelectorAll('button'));
+                                        for (let b of buttons) {
+                                            try {
+                                                const txt = (b.innerText || '').trim().toLowerCase();
+                                                if (txt === 'add files' || txt.indexOf('add files') !== -1) return b;
+                                            } catch(e) { }
+                                        }
+                                        return null;
+                                    };
+
+                                    const hideButtonVisually = (btn) => {
+                                        try {
+                                            // Move off-screen but keep it in the DOM so .click() works
+                                            btn.style.position = 'absolute';
+                                            btn.style.left = '-9999px';
+                                            btn.style.top = '0';
+                                            btn.style.opacity = '0';
+                                            btn.style.zIndex = '0';
+                                        } catch(e) {}
+                                    };
+
+                                    const clickTarget = () => {
+                                        // Try visible file input first
+                                        const inp = findVisibleFileInput();
+                                        if (inp) {
+                                            try { inp.click(); return true; } catch(e) {}
+                                        }
+                                        // Fallback: click Add files button (may be hidden visually but still clickable)
+                                        const btn = findAddButton();
+                                        if (btn) {
+                                            try { hideButtonVisually(btn); btn.click(); return true; } catch(e) {}
+                                        }
+                                        return false;
+                                    };
+
+                                    slot.addEventListener('click', function(e){ e.preventDefault(); try { clickTarget(); } catch(err){} });
+                                    return true;
+                                } catch(err){ return false; }
+                            };
+                            if (!attach()){
+                                let attempts = 0;
+                                const intr = setInterval(()=>{ attempts+=1; if (attach()||attempts>12) clearInterval(intr); },250);
                             }
-                        };
-                        tryBindToolbar();
+                        } catch(e){}
+                    })();
                     </script>
-                    """, height=40)
+                    '''
+                    components.html(bind, height=0)
 
                 with col_tb_3:
                     # Sort Button (Popover)
@@ -1011,8 +1075,10 @@ def render_stage_2_upload(navigator: StageNavigator, config: Dict):
                     # Check if there's a short-lived insert preview to render at the insertion slot
                     insert_preview = st.session_state.get('last_insert_preview')
 
-                    # Render cards row-by-row so the add-slot can be placed immediately after the last card
-                    rows = (n + cols_per_row - 1) // cols_per_row if n > 0 else 1
+                    # Render cards row-by-row and always include one extra slot
+                    # for the "Add" card so it's visible even when rows are full.
+                    total_items = n + 1  # n cards + 1 add-slot
+                    rows = (total_items + cols_per_row - 1) // cols_per_row if total_items > 0 else 1
                     rendered_count = 0
                     for r in range(rows):
                         row_cols = st.columns(cols_per_row)
