@@ -1059,11 +1059,18 @@ def render_stage_2_upload(navigator: StageNavigator, config: Dict):
                     }
                     .st-emotion-cache-1j4it34 { flex:none; }
                     div[data-testid="stColumn"] { width:auto; flex: none; min-width: auto; }
-                    .st-emotion-cache-ai037n { margin-bottom: 12px; }
+                    div[data-testid=stMarkdownContainer] {
+                        margin-bottom: 12px;
+                    }
                     /* Name and pages centered below thumbnail */
                     .card-name { color:#6b7280; font-size:12px; text-align:center; background: rgba(47,134,255,0.12); color:#0b5cff; padding:6px 12px; border-radius:12px; font-weight:600; position: absolute; top: 10px; left: 25px; width: 170px; }
                     .card-pages { font-weight:400; color:#a3a3a3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; position:absolute; left:28%; top:25px; }
                     /* Ensure action row buttons inside Streamlit columns are compact */
+                    button[data-testid=stBaseButton-secondary] {
+                        padding-top: 10px;
+                        margin-bottom: -10px;
+                        padding-bottom: 0px;
+                    }
                     .stButton>button { padding:6px 8px }
                     @media (max-width:900px) { 
                         .card-wrapper { min-height:300px }
